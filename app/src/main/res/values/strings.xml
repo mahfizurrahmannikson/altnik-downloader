@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Altnik Downloader</string>
+    <string name="hint_paste">Paste Instagram / Facebook link here</string>
+    <string name="btn_paste">Paste</string>
+    <string name="btn_download">Download</string>
+    <string name="btn_downloading">Downloading…</string>
+    <string name="msg_no_link">Please paste a link first</string>
+    <string name="msg_invalid">Invalid link. Copy the Reel/Video link and try again.</string>
+    <string name="msg_done">Saved to Downloads / AltnikDownloader</string>
+    <string name="msg_fail">Download failed. Try again.</string>
+</resources>
