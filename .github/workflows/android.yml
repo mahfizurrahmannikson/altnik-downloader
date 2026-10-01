@@ -33,11 +33,34 @@ jobs:
           unzip -q gradle-8.6-bin.zip
           echo "$PWD/gradle-8.6/bin" >> $GITHUB_PATH
 
+      # Files may be at repo root OR inside "InstaFB Downloader/" subfolder
+      # (happens when the whole folder is drag-dropped into GitHub).
+      # Detect the real project dir automatically.
+      - name: Locate Gradle project
+        run: |
+          echo "=== repo root ==="; ls -la
+          if [ -f "settings.gradle.kts" ]; then
+            echo "PROJECT_DIR=." >> $GITHUB_ENV
+            echo "Found project at repo root"
+          else
+            DIR=$(find . -maxdepth 4 -name "settings.gradle.kts" | head -1 | xargs dirname)
+            if [ -z "$DIR" ]; then
+              echo "ERROR: settings.gradle.kts not found anywhere! Check uploaded files."
+              find . -maxdepth 3 | head -50
+              exit 1
+            fi
+            echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+            echo "Found project at: $DIR"
+            ls -la "$DIR"; ls -la "$DIR/app" || true
+          fi
+
       - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: altnik-downloader-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
