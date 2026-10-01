@@ -7,7 +7,7 @@ import retrofit2.http.POST
 data class CobaltRequest(
     val url: String,
     val videoQuality: String = "720",
-    val filenameMode: String = "basic"
+    val filenameStyle: String = "basic"
 )
 
 data class PickerItem(
@@ -16,16 +16,19 @@ data class PickerItem(
     val type: String? = null
 )
 
+data class CobaltError(val code: String? = null)
+
 data class CobaltResponse(
     val status: String? = null,      // "redirect" | "tunnel" | "picker" | "error"
-    val url: String? = null,         // direct file url when redirect/tunnel
+    val url: String? = null,         // direct file URL when redirect/tunnel
+    val filename: String? = null,
     val picker: List<PickerItem>? = null,
-    val pickerType: String? = null,
-    val text: String? = null         // error message
+    val error: CobaltError? = null
 )
 
 interface CobaltApi {
     @Headers("Accept: application/json", "Content-Type: application/json")
-    @POST("api/json")
+    // Cobalt v10+: process requests at POST / (not /api/json).
+    @POST("/")
     suspend fun resolve(@Body body: CobaltRequest): CobaltResponse
 }

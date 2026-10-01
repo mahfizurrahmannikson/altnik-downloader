@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var etServerUrl: EditText
     private lateinit var etLink: EditText
     private lateinit var btnPaste: Button
     private lateinit var btnDownload: Button
@@ -29,8 +30,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        etServerUrl = findViewById(R.id.etServerUrl)
         etLink = findViewById(R.id.etLink)
         btnPaste = findViewById(R.id.btnPaste)
+        etServerUrl.setText(getSharedPreferences("settings", MODE_PRIVATE)
+            .getString("cobalt_server_url", ""))
         btnDownload = findViewById(R.id.btnDownload)
         progress = findViewById(R.id.progress)
         tvStatus = findViewById(R.id.tvStatus)
@@ -49,7 +53,13 @@ class MainActivity : AppCompatActivity() {
             if (!isSupportedLink(link)) {
                 toast(getString(R.string.msg_invalid)); return@setOnClickListener
             }
-            fetchAndDownload(link)
+            val serverUrl = etServerUrl.text.toString().trim()
+            if (serverUrl.isEmpty()) {
+                toast("Enter your authorized Cobalt server URL first."); return@setOnClickListener
+            }
+            getSharedPreferences("settings", MODE_PRIVATE).edit()
+                .putString("cobalt_server_url", serverUrl).apply()
+            fetchAndDownload(link, serverUrl)
         }
     }
 
@@ -65,9 +75,8 @@ class MainActivity : AppCompatActivity() {
             // Shared text may contain extra words — extract first http link
             val link = Regex("https?://\\S+").find(shared)?.value ?: shared
             etLink.setText(link)
-            tvStatus.text = "Link received. Press Download."
-            // auto-start for best UX
-            if (isSupportedLink(link)) fetchAndDownload(link)
+            tvStatus.text = "Link received. Enter your authorized server URL and press Download."
+            // Do not auto-start: the user must choose an authorized server first.
         }
     }
 
@@ -91,31 +100,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchAndDownload(pageUrl: String) {
-        setLoading(true, "Resolving video…")
+    private fun fetchAndDownload(pageUrl: String, serverUrl: String) {
+        setLoading(true, "Resolving media…")
         lifecycleScope.launch {
             try {
-                val res = CobaltClient.api.resolve(CobaltRequest(url = pageUrl))
+                val res = CobaltClient.apiFor(serverUrl).resolve(CobaltRequest(url = pageUrl))
                 when (res.status) {
                     "redirect", "tunnel" -> {
-                        val fileUrl = res.url!!
-                        showThumb(null)
-                        startSystemDownload(fileUrl, isVideo = true)
+                        val fileUrl = res.url
+                        if (fileUrl.isNullOrBlank()) {
+                            setLoading(false, "The server returned no media URL.")
+                        } else {
+                            showThumb(null)
+                            val filename = res.filename?.lowercase().orEmpty()
+                            val isVideo = filename.endsWith(".mp4") || filename.endsWith(".webm") ||
+                                    filename.endsWith(".mov") || filename.isBlank()
+                            startSystemDownload(fileUrl, isVideo = isVideo)
+                        }
                     }
                     "picker" -> {
-                        // carousel: pick first video item, else first item
-                        val item = res.picker?.firstOrNull { it.url != null }
-                            ?: res.picker?.firstOrNull()
+                        // A carousel may contain photos and videos. Download the first item.
+                        val item = res.picker?.firstOrNull { !it.url.isNullOrBlank() }
                         val fileUrl = item?.url
-                        if (fileUrl == null) {
+                        if (fileUrl.isNullOrBlank()) {
                             setLoading(false, "No downloadable media found.")
                         } else {
-                            if (item.thumb != null) showThumb(item.thumb)
-                            startSystemDownload(fileUrl, isVideo = true)
+                            if (!item.thumb.isNullOrBlank()) showThumb(item.thumb)
+                            val isVideo = item.type.equals("video", ignoreCase = true) ||
+                                    item.type.equals("gif", ignoreCase = true)
+                            startSystemDownload(fileUrl, isVideo = isVideo)
                         }
                     }
                     else -> {
-                        setLoading(false, res.text ?: getString(R.string.msg_fail))
+                        val apiError = res.error?.code ?: "Unknown server error"
+                        setLoading(false, "Server response: $apiError")
                     }
                 }
             } catch (e: Exception) {
