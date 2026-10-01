@@ -7,8 +7,8 @@ Share koro Instagram Reel -> **Altnik Downloader** -> auto download Gallery te.
 - 2 vabe kaj kore:
   1. Instagram e **Share > Altnik Downloader** (auto start)
   2. **Copy Link > app e Paste > Download**
-- Kono login / API key lage na (free Cobalt API instance use kore)
 - System DownloadManager diye `Downloads/AltnikDownloader/` e save — Gallery/Files e dekha jabe
+- App er vitore tomar nijer/authorized Cobalt server URL dite hobe. Public random server reliable na, onek server API access block kore.
 
 ## Build ONLINE (Android Studio lagbe na) — Recommended
 Workflow file already added: `.github/workflows/android.yml`
@@ -33,13 +33,14 @@ Workflow file already added: `.github/workflows/android.yml`
 2. App e link asle **Download** chap dao
 3. Notification ele bujhba download sesh. File: `Downloads/AltnikDownloader/`
 
-## Jodi Cobalt instance down thake
-`CobaltClient.kt` e `BASE_URL` change koro, jekono public instance:
-- `https://api.cobalt.tools/`
-- `https://cobalt-api.kwiatekmiki.com/`
-- `https://co.wukko.xyz/`
+## Cobalt server setup (important)
+Cobalt official hosted API **does not allow third-party apps** and may require Turnstile CAPTCHA. Public random instances also go offline often. The reliable option is a Cobalt server that you operate or are authorized to use.
 
-API doc: https://github.com/imputnet/cobalt (POST `api/json` with `{"url": "..."}`)
+The app now asks for the server URL on the main screen and saves it locally. Cobalt API v10+ uses `POST /` — not the old `/api/json` endpoint.
+
+For your own server, use the official Cobalt documentation: https://github.com/imputnet/cobalt/blob/main/docs/run-an-instance.md
+
+API documentation: https://github.com/imputnet/cobalt/blob/main/docs/api.md
 
 ## Legal note
 - Sudhu public content / nijer content download koro
